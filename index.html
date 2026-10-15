@@ -449,11 +449,11 @@ function init3D(){
   // person (FP2 presence) + pulse ring
   const pm1=M('#3a4a63',{roughness:.7}),pm2=M('#d9b08c',{roughness:.6});
   const person=new THREE.Group(),body=new THREE.Mesh(new THREE.CapsuleGeometry(.45,3.4,6,16),pm1),head=new THREE.Mesh(new THREE.SphereGeometry(.32,20,14),pm2);
-  body.position.y=2.15;head.position.y=4.65;body.castShadow=head.castShadow=true;person.add(body,head);person.scale.setScalar(1.12);person.position.set(4.5,0,5.2);person.visible=false;scene3.add(person);
-  const pring=new THREE.Mesh(new THREE.RingGeometry(.6,.72,40),new THREE.MeshBasicMaterial({color:'#4cd19a',transparent:true,opacity:.5,side:THREE.DoubleSide,depthWrite:false}));pring.rotation.x=-Math.PI/2;pring.position.y=.03;pring.visible=false;scene3.add(pring);
+  body.position.y=2.15;head.position.y=4.65;body.castShadow=head.castShadow=true;person.add(body,head);person.scale.setScalar(1.12);person.position.set(4.5,0,5.2);person.visible=false;
+  const pring=new THREE.Mesh(new THREE.RingGeometry(.6,.72,40),new THREE.MeshBasicMaterial({color:'#4cd19a',transparent:true,opacity:.5,side:THREE.DoubleSide,depthWrite:false}));pring.rotation.x=-Math.PI/2;pring.position.y=.03;pring.visible=false;
   const WP=[[4.5,5.2,0],[9.6,3.4,0],[10.1,2.7,4],[7.0,2.7,4],[6.5,5.6,0],[4.2,6.3,3]],pz={i:1,at:0,wait:0};
   function stepPerson(dt,tt){
-    if(!present){person.visible=pring.visible=false;return}
+    return;
     person.visible=pring.visible=true;let bob=0;
     if(pz.wait>0){pz.wait-=dt;const target=WP[pz.at][1]<4?Math.PI:0;person.rotation.y+=(target-person.rotation.y)*Math.min(1,dt*5)}
     else{const w=WP[pz.i],dx=w[0]-person.position.x,dz=w[1]-person.position.z,d=Math.hypot(dx,dz);
