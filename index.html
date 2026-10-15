@@ -31,7 +31,12 @@ header h1{font-size:17px;margin:0;font-weight:650;letter-spacing:.2px}
 .mk.on .n{border-color:var(--tc,#fff);box-shadow:0 0 12px var(--tc,#fff)}
 .mk.sel .n{background:#fff;color:#111}
 .mk .t{background:#0d1118d9;border:1px solid #ffffff30;border-radius:99px;padding:3px 10px;font-size:12.5px;font-weight:600;color:#fff;white-space:nowrap}
-.reset{position:absolute;right:14px;top:12px;background:#0d1118cc;border:1px solid var(--line);border-radius:10px;padding:8px 12px;min-height:40px;font-size:13px}
+.livepill{position:absolute;left:14px;top:12px;background:#0d1118cc;border:1px solid var(--line);border-radius:99px;padding:6px 12px;font-size:12.5px;font-weight:600;letter-spacing:.2px;display:flex;align-items:center;gap:8px;pointer-events:none}
+.dotl{width:8px;height:8px;border-radius:50%;background:#8a93a3}
+.dotl.live{background:#4cd19a;box-shadow:0 0 0 0 #4cd19a88;animation:pulse 1.8s infinite}
+@keyframes pulse{70%{box-shadow:0 0 0 8px #4cd19a00}100%{box-shadow:0 0 0 0 #4cd19a00}}
+.rng-time{--track:linear-gradient(90deg,#0b1428 0%,#2a4670 22%,#ff9a5a 28%,#9fd0ff 40%,#4a90e2 52%,#9fd0ff 62%,#ff9a5a 77%,#2a4670 84%,#0b1428 100%);margin-top:6px}
+.chips4{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:4px}.reset{position:absolute;right:14px;top:12px;background:#0d1118cc;border:1px solid var(--line);border-radius:10px;padding:8px 12px;min-height:40px;font-size:13px}
 .hint{position:absolute;left:14px;bottom:10px;font-size:12px;color:var(--muted);pointer-events:none}
 .panel{overflow:auto;padding:14px;background:var(--panel);border-left:1px solid var(--line);display:flex;flex-direction:column;gap:12px;max-height:calc(100dvh - 63px)}
 .card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:12px}
@@ -141,7 +146,7 @@ input[type=range]::-moz-range-thumb{width:26px;height:26px;border-radius:50%;bac
 
   <div class="layout" id="kitchenView">
     <section class="stage">
-      <div class="view3d"><div id="scene"></div><div id="marks"></div></div><button class="reset" id="resetView">Reset view</button>
+      <div class="view3d"><div id="scene"></div><div id="marks"></div></div><button class="reset" id="resetView">Reset view</button><div class="livepill" id="livePill"></div>
       <div class="hint">Drag to rotate &middot; pinch or scroll to zoom &middot; tap a light or a number</div>
     </section>
     <aside class="panel" id="panel"></aside>
@@ -206,7 +211,7 @@ const RW=14,RD=12,RH=9;
 const CANS=[[5,4.6],[8.5,4.6],[12,4.6],[5,10.8],[8.8,10.8],[12,8.4]];
 const PENDS=[3.4,5,6.6];
 let renderer,camera3,controls,scene3;
-const Lz={},clickables=[],marks={};
+const Lz={},clickables=[],marks={},burners=[];let SKYTEX,CLOCKTEX;
 const rnd3=(()=>{let s=5;return()=>(s=(s*16807)%2147483647)/2147483647})();
 
 function ctex(w,h,draw,rep){const c=document.createElement('canvas');c.width=w;c.height=h;draw(c.getContext('2d'),w,h);
@@ -225,15 +230,15 @@ const drawTile=(g,w,h)=>{g.fillStyle='#bab5aa';g.fillRect(0,0,w,h);const th=64,t
 const drawRug=(g,w,h)=>{g.fillStyle='#33445b';g.fillRect(0,0,w,h);g.strokeStyle='#c9b99a';g.lineWidth=14;g.strokeRect(24,24,w-48,h-48);
   g.fillStyle='#3e526d';g.fillRect(52,52,w-104,h-104);for(let x=70;x<w-60;x+=34){g.fillStyle='#33445b';g.fillRect(x,60,14,h-120)}
   for(let i=0;i<4000;i++){g.fillStyle='rgba(255,255,255,.04)';g.fillRect(rnd3()*w,rnd3()*h,2,2)}};
-const drawSky=(g,w,h)=>{const gr=g.createLinearGradient(0,0,0,h);gr.addColorStop(0,'#0b1428');gr.addColorStop(1,'#2a4670');g.fillStyle=gr;g.fillRect(0,0,w,h);
-  for(let i=0;i<70;i++){g.fillStyle=`rgba(255,255,255,${.3+rnd3()*.6})`;g.fillRect(rnd3()*w,rnd3()*h*.7,1+rnd3()*1.6,1+rnd3()*1.6)}
-  const mg=g.createRadialGradient(w*.7,h*.3,4,w*.7,h*.3,70);mg.addColorStop(0,'rgba(230,240,255,.9)');mg.addColorStop(.25,'rgba(190,210,255,.25)');mg.addColorStop(1,'rgba(190,210,255,0)');g.fillStyle=mg;g.fillRect(0,0,w,h);
-  g.fillStyle='#eef4ff';g.beginPath();g.arc(w*.7,h*.3,17,0,7);g.fill();
-  g.fillStyle='#060b13';for(let i=0;i<7;i++){const x=i*w/6.2,th=70+rnd3()*80;g.beginPath();g.moveTo(x-45,h);g.lineTo(x,h-th);g.lineTo(x+45,h);g.fill()}g.fillRect(0,h-26,w,26)};
-const drawClock=(g,w)=>{g.fillStyle='#2b2f36';g.beginPath();g.arc(w/2,w/2,w/2,0,7);g.fill();g.fillStyle='#f1eee6';g.beginPath();g.arc(w/2,w/2,w/2-16,0,7);g.fill();
-  g.strokeStyle='#222';g.lineWidth=8;g.lineCap='round';for(let i=0;i<12;i++){const a=i*Math.PI/6,r1=w/2-36,r2=w/2-24;g.beginPath();g.moveTo(w/2+Math.sin(a)*r1,w/2-Math.cos(a)*r1);g.lineTo(w/2+Math.sin(a)*r2,w/2-Math.cos(a)*r2);g.stroke()}
-  g.lineWidth=11;g.beginPath();g.moveTo(w/2,w/2);g.lineTo(w/2+50,w/2-66);g.stroke();g.lineWidth=7;g.beginPath();g.moveTo(w/2,w/2);g.lineTo(w/2-8,w/2+90);g.stroke()};
-
+const drawSky=(g,w,h)=>{g.fillStyle='#0b1428';g.fillRect(0,0,w,h)};
+const drawClockNow=(g,w)=>{const H=(window.ENV&&ENV.hour!=null)?ENV.hour:(()=>{const d=new Date();return d.getHours()+d.getMinutes()/60})();
+  g.clearRect(0,0,w,w);g.fillStyle='#2b2f36';g.beginPath();g.arc(w/2,w/2,w/2,0,7);g.fill();g.fillStyle='#f1eee6';g.beginPath();g.arc(w/2,w/2,w/2-16,0,7);g.fill();
+  g.strokeStyle='#222';g.lineCap='round';g.lineWidth=8;for(let i=0;i<12;i++){const a=i*Math.PI/6,r1=w/2-36,r2=w/2-24;g.beginPath();g.moveTo(w/2+Math.sin(a)*r1,w/2-Math.cos(a)*r1);g.lineTo(w/2+Math.sin(a)*r2,w/2-Math.cos(a)*r2);g.stroke()}
+  const ha=((H%12)/12)*Math.PI*2,ma=(H%1)*Math.PI*2;
+  g.lineWidth=11;g.beginPath();g.moveTo(w/2,w/2);g.lineTo(w/2+Math.sin(ha)*62,w/2-Math.cos(ha)*62);g.stroke();
+  g.lineWidth=7;g.beginPath();g.moveTo(w/2,w/2);g.lineTo(w/2+Math.sin(ma)*92,w/2-Math.cos(ma)*92);g.stroke();
+  g.fillStyle='#222';g.beginPath();g.arc(w/2,w/2,8,0,7);g.fill()};
+const softDot=()=>ctex(64,64,(g,w)=>{const r=g.createRadialGradient(w/2,w/2,0,w/2,w/2,w/2);r.addColorStop(0,'rgba(255,255,255,1)');r.addColorStop(.35,'rgba(255,255,255,.35)');r.addColorStop(1,'rgba(255,255,255,0)');g.fillStyle=r;g.fillRect(0,0,w,w)},[1,1]);
 function makeEnv(){const s=new THREE.Scene();
   s.add(new THREE.Mesh(new THREE.BoxGeometry(40,40,40),new THREE.MeshBasicMaterial({color:0x1b212b,side:THREE.BackSide})));
   const panel=(w,h,x,y,z,ry,v)=>{const m=new THREE.Mesh(new THREE.PlaneGeometry(w,h),new THREE.MeshBasicMaterial({color:new THREE.Color(v,v,v),side:THREE.DoubleSide}));m.position.set(x,y,z);m.rotation.y=ry;s.add(m)};
@@ -273,8 +278,8 @@ function init3D(){
     curt:M('#cfc6b4',{roughness:.95}),dark:M('#1c1f25',{roughness:.5}),
     tile:M('#ffffff',{map:tileT,roughness:.25,envMap:env,envMapIntensity:.3}),tile2:M('#ffffff',{map:tileT2,roughness:.25,envMap:env,envMapIntensity:.3}),
     rug:M('#ffffff',{map:ctex(512,512,drawRug,[1,1]),roughness:1}),
-    sky:new THREE.MeshBasicMaterial({map:ctex(512,400,drawSky,[1,1])}),void:new THREE.MeshBasicMaterial({color:'#05070a'}),
-    clock:new THREE.MeshBasicMaterial({map:ctex(256,256,drawClock,[1,1])})
+    sky:new THREE.MeshBasicMaterial({map:(SKYTEX=ctex(512,400,drawSky,[1,1]))}),void:new THREE.MeshBasicMaterial({color:'#05070a'}),
+    clock:new THREE.MeshBasicMaterial({map:(CLOCKTEX=ctex(256,256,drawClockNow,[1,1]))})
   };
 
   /* ---- helpers ---- */
@@ -296,7 +301,7 @@ function init3D(){
   const pbox=(id,x0,y0,z0,x1,y1,z1)=>proxy(id,new THREE.BoxGeometry(x1-x0,y1-y0,z1-z0),(x0+x1)/2,(y0+y1)/2,(z0+z1)/2);
 
   /* ---- ambient (night) ---- */
-  scene3.add(new THREE.AmbientLight('#2b3752',.16),new THREE.HemisphereLight('#7f93bd','#2b2118',.1));
+  const amb3=new THREE.AmbientLight('#2b3752',.16),hemi3=new THREE.HemisphereLight('#7f93bd','#2b2118',.1);scene3.add(amb3,hemi3);
 
   /* ---- floor, rug, walls ---- */
   const fl=new THREE.Mesh(new THREE.PlaneGeometry(RW,RD),mat.floor);fl.rotation.x=-Math.PI/2;fl.position.set(RW/2,0,RD/2);fl.receiveShadow=true;scene3.add(fl);
@@ -326,7 +331,7 @@ function init3D(){
     doorZ(x0+.04,x1-.04,2.3,2.95,2,mat.cab,mat.cabP);doorZ(x0+.04,x1-.04,.4,2.25,2,mat.cab,mat.cabP);hbarX(xm-.3,xm+.3,2.62,2.13);vbar(x1-.3,1.45,2.0,2.13)}
   bb(0,3,0,12,3.14,2.12,stone(4,1));
   bb(6,3.14,.25,8,3.18,1.8,mat.glass,false);
-  for(const [bx,bz] of [[6.5,.7],[7.5,.7],[6.5,1.4],[7.5,1.4]]){const t=new THREE.Mesh(new THREE.TorusGeometry(.3,.025,8,28),mat.steelD);t.rotation.x=Math.PI/2;t.position.set(bx,3.2,bz);scene3.add(t)}
+  for(const [bx,bz] of [[6.5,.7],[7.5,.7],[6.5,1.4],[7.5,1.4]]){const t=new THREE.Mesh(new THREE.TorusGeometry(.3,.025,8,28),(()=>{const m=mat.steelD.clone();burners.push(m);return m})());t.rotation.x=Math.PI/2;t.position.set(bx,3.2,bz);scene3.add(t)}
   bb(9,3.14,.3,11.2,3.18,1.8,mat.steel,false);bb(9.2,3.18,.45,11,3.19,1.65,mat.steelD,false);vbar(10.1,3.14,3.95,.25);hbarZ(.25,.85,3.95,10.1);
   // props
   bb(.5,3.14,.25,1.6,4.1,1.05,mat.plastic);bb(1.2,3.65,1.05,1.4,3.72,1.07,new THREE.MeshBasicMaterial({color:'#4cd19a'}),false);
@@ -402,6 +407,79 @@ function init3D(){
     proxy('pendant',new THREE.SphereGeometry(.85,12,10),px,6.1,8.4)}
   reg('pendant').anchor.set(5,7.1,8.4);
 
+  /* ---- live environment: sun/moon, glow halos, person, steam, dust ---- */
+  const dotTex=softDot();
+  const E=window.ENV={hour:(()=>{const d=new Date();return d.getHours()+d.getMinutes()/60})(),live:true,day:0};
+  const glow=(id,x,y,z,size,k)=>{const s=new THREE.Sprite(new THREE.SpriteMaterial({map:dotTex,transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending}));s.position.set(x,y,z);s.scale.set(size,size,1);s.userData.k=k;(reg(id).glows=reg(id).glows||[]).push(s);scene3.add(s)};
+  for(let x=.8;x<11.6;x+=1.7)glow('above',x,7.72,.3,2.4,.5);
+  for(let x=.8;x<11.6;x+=1.7)glow('under',x,5.08,.9,1.7,.4);
+  for(let x=2.5;x<11.8;x+=1.8)glow('toe',x,.14,1.95,1.5,.5);
+  for(let z=2.7;z<7;z+=1.8)glow('toe',1.9,.14,z,1.5,.5);
+  for(let x=2.8;x<7.4;x+=1.5)glow('penin',x,2.84,9.74,1.5,.45);
+  for(const [x,z] of CANS)glow('recessed',x,RH-.18,z,1.3,.7);
+  for(const px of PENDS){glow('pendant',px,6.0,8.4,1.8,.7);glow('pendant',px,5.8,8.4,4,.22)}
+  // pot on the hob
+  cyl(7.5,3.18,3.78,.7,.38,mat.steel);cyl(7.5,3.78,3.88,.7,.4,mat.steelD,.34);sph(7.5,3.9,.7,.05,mat.steelD);
+  // sun (through the window; invisible ceiling blocks sky light from above)
+  const sun=new THREE.DirectionalLight('#fff1dc',0);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);
+  const sc=sun.shadow.camera;sc.left=-18;sc.right=18;sc.top=18;sc.bottom=-18;sc.near=1;sc.far=90;sun.shadow.bias=-.0004;sun.target.position.set(7,0,6);scene3.add(sun,sun.target);
+  const ceil=new THREE.Mesh(new THREE.PlaneGeometry(RW+.6,RD+.6),new THREE.MeshBasicMaterial({colorWrite:false,depthWrite:false,side:THREE.DoubleSide}));
+  ceil.rotation.x=Math.PI/2;ceil.position.set(RW/2,RH+.05,RD/2);ceil.castShadow=true;scene3.add(ceil);
+  // sky painter
+  const stars=Array.from({length:70},()=>[rnd3(),rnd3()*.7,.3+rnd3()*.6,1+rnd3()*1.6]);
+  const lerpC=(a,b,k)=>a.map((v,i)=>Math.round(v+(b[i]-v)*k));
+  const sm=(a,b,x)=>{const q=Math.min(1,Math.max(0,(x-a)/(b-a)));return q*q*(3-2*q)};
+  function paintSky(day,e,t){const g=SKYTEX.image.getContext('2d'),w=512,h=400;
+    const N=[[11,20,40],[42,70,112]],Dy=[[74,144,226],[191,227,255]],Du=[[42,59,107],[255,154,90]],dusk=day>.02?Math.max(0,1-e*4):0;
+    const top=lerpC(lerpC(N[0],Dy[0],day),Du[0],dusk*.9),bot=lerpC(lerpC(N[1],Dy[1],day),Du[1],dusk*.9);
+    const gr=g.createLinearGradient(0,0,0,h);gr.addColorStop(0,`rgb(${top})`);gr.addColorStop(1,`rgb(${bot})`);g.fillStyle=gr;g.fillRect(0,0,w,h);
+    for(const [x,y,a,s] of stars){g.fillStyle=`rgba(255,255,255,${a*(1-day)})`;g.fillRect(x*w,y*h,s,s)}
+    if(day>.05){g.fillStyle=`rgba(255,255,255,${.55*day})`;for(const [cx,cy,cr] of [[.2,.25,40],[.55,.18,55],[.8,.4,35]])for(let k=0;k<5;k++){g.beginPath();g.arc(cx*w+k*cr*.5,cy*h+(k%2)*8,cr*.6,0,7);g.fill()}
+      const sx=w*(.12+.76*t),sy=h*(.62-.4*e),sg=g.createRadialGradient(sx,sy,2,sx,sy,90);sg.addColorStop(0,'rgba(255,244,214,.95)');sg.addColorStop(.2,'rgba(255,226,160,.35)');sg.addColorStop(1,'rgba(255,226,160,0)');g.fillStyle=sg;g.fillRect(0,0,w,h);g.fillStyle='#fff6dd';g.beginPath();g.arc(sx,sy,16,0,7);g.fill()}
+    if(day<.95){const mt=Math.min(1,((E.hour-18.6+24)%24)/12.2),mx=w*(.12+.76*mt),my=h*(.55-.35*Math.sin(Math.PI*mt));g.globalAlpha=1-day;
+      const mg=g.createRadialGradient(mx,my,4,mx,my,70);mg.addColorStop(0,'rgba(230,240,255,.9)');mg.addColorStop(.25,'rgba(190,210,255,.25)');mg.addColorStop(1,'rgba(190,210,255,0)');g.fillStyle=mg;g.fillRect(0,0,w,h);g.fillStyle='#eef4ff';g.beginPath();g.arc(mx,my,17,0,7);g.fill();g.globalAlpha=1}
+    g.fillStyle=`rgb(${Math.round(6+day*20)},${Math.round(11+day*46)},${Math.round(19+day*20)})`;
+    for(let i=0;i<7;i++){const x=i*w/6.2,th=70+((i*37)%80);g.beginPath();g.moveTo(x-45,h);g.lineTo(x,h-th);g.lineTo(x+45,h);g.fill()}g.fillRect(0,h-26,w,26);SKYTEX.needsUpdate=true}
+  window.applyEnv=function(){
+    const rise=6.7,set=18.6,day=sm(rise-.6,rise+1,E.hour)*(1-sm(set-1,set+.6,E.hour)),t=Math.min(1,Math.max(0,(E.hour-rise)/(set-rise))),e=Math.sin(Math.PI*t);E.day=day;
+    amb3.intensity=.16+.5*day;hemi3.intensity=.1+.5*day;moon.intensity=.5*(1-day);
+    sun.intensity=3.2*day*Math.pow(e,.5);sun.color.set('#fff1dc').lerp(new THREE.Color('#ff8f45'),Math.max(0,1-e*2.2));
+    sun.position.set(-20,3+14*e,6.2+(E.hour-12.6)*1.1);renderer.toneMappingExposure=.95-.12*day;
+    paintSky(day,e,t);drawClockNow(CLOCKTEX.image.getContext('2d'),256);CLOCKTEX.needsUpdate=true};
+  // person (FP2 presence) + pulse ring
+  const pm1=M('#3a4a63',{roughness:.7}),pm2=M('#d9b08c',{roughness:.6});
+  const person=new THREE.Group(),body=new THREE.Mesh(new THREE.CapsuleGeometry(.45,3.4,6,16),pm1),head=new THREE.Mesh(new THREE.SphereGeometry(.32,20,14),pm2);
+  body.position.y=2.15;head.position.y=4.65;body.castShadow=head.castShadow=true;person.add(body,head);person.scale.setScalar(1.12);person.position.set(4.5,0,5.2);person.visible=false;scene3.add(person);
+  const pring=new THREE.Mesh(new THREE.RingGeometry(.6,.72,40),new THREE.MeshBasicMaterial({color:'#4cd19a',transparent:true,opacity:.5,side:THREE.DoubleSide,depthWrite:false}));pring.rotation.x=-Math.PI/2;pring.position.y=.03;pring.visible=false;scene3.add(pring);
+  const WP=[[4.5,5.2,0],[9.6,3.4,0],[10.1,2.7,4],[7.0,2.7,4],[6.5,5.6,0],[4.2,6.3,3]],pz={i:1,at:0,wait:0};
+  function stepPerson(dt,tt){
+    if(!present){person.visible=pring.visible=false;return}
+    person.visible=pring.visible=true;let bob=0;
+    if(pz.wait>0){pz.wait-=dt;const target=WP[pz.at][1]<4?Math.PI:0;person.rotation.y+=(target-person.rotation.y)*Math.min(1,dt*5)}
+    else{const w=WP[pz.i],dx=w[0]-person.position.x,dz=w[1]-person.position.z,d=Math.hypot(dx,dz);
+      if(d<.12){pz.at=pz.i;pz.wait=w[2];pz.i=(pz.i+1)%WP.length}
+      else{const s=Math.min(d,2.2*dt);person.position.x+=dx/d*s;person.position.z+=dz/d*s;let da=Math.atan2(dx,dz)-person.rotation.y;da=Math.atan2(Math.sin(da),Math.cos(da));person.rotation.y+=da*Math.min(1,dt*7);bob=Math.sin(tt*9)*.05}}
+    person.position.y=Math.abs(bob);pring.position.x=person.position.x;pring.position.z=person.position.z;pring.scale.setScalar(1+.12*Math.sin(tt*3));pring.material.opacity=.35+.2*Math.sin(tt*3)}
+  // steam (pot + kettle) and dust motes
+  const NS=40,sPos=new Float32Array(NS*3),sCol=new Float32Array(NS*3),sAge=Float32Array.from({length:NS},()=>Math.random()),sSrc=[[7.5,3.95,.7],[3,3.9,.9]];
+  const sGeo=new THREE.BufferGeometry();sGeo.setAttribute('position',new THREE.BufferAttribute(sPos,3));sGeo.setAttribute('color',new THREE.BufferAttribute(sCol,3));
+  const steam=new THREE.Points(sGeo,new THREE.PointsMaterial({size:.55,map:dotTex,vertexColors:true,transparent:true,depthWrite:false,blending:THREE.AdditiveBlending}));steam.frustumCulled=false;scene3.add(steam);
+  const ND=140,dPos=new Float32Array(ND*3),dVel=new Float32Array(ND*3);
+  for(let i=0;i<ND;i++){dPos[i*3]=1+Math.random()*12;dPos[i*3+1]=.5+Math.random()*8;dPos[i*3+2]=1+Math.random()*10;dVel[i*3]=(Math.random()-.5)*.12;dVel[i*3+1]=(Math.random()-.3)*.08;dVel[i*3+2]=(Math.random()-.5)*.12}
+  const dGeo=new THREE.BufferGeometry();dGeo.setAttribute('position',new THREE.BufferAttribute(dPos,3));
+  const dust=new THREE.Points(dGeo,new THREE.PointsMaterial({size:.12,map:dotTex,color:'#ffffff',transparent:true,opacity:.2,depthWrite:false,blending:THREE.AdditiveBlending}));dust.frustumCulled=false;scene3.add(dust);
+  function stepFx(dt,tt){
+    const cook=!!window.COOK;
+    for(let i=0;i<NS;i++){const s=sSrc[i%2];sAge[i]+=dt*.35;if(sAge[i]>1){sAge[i]=0;sPos[i*3]=s[0]+(Math.random()-.5)*.25;sPos[i*3+1]=s[1];sPos[i*3+2]=s[2]+(Math.random()-.5)*.2}
+      const a=sAge[i];sPos[i*3+1]=s[1]+a*2.4;sPos[i*3]+=Math.sin(a*6+i)*.004;const c=cook?Math.sin(Math.PI*a)*.4:0;sCol[i*3]=sCol[i*3+1]=sCol[i*3+2]=c}
+    sGeo.attributes.position.needsUpdate=sGeo.attributes.color.needsUpdate=true;
+    for(let i=0;i<ND;i++){for(let k=0;k<3;k++)dPos[i*3+k]+=dVel[i*3+k]*dt;
+      if(dPos[i*3]<.5||dPos[i*3]>13.5)dVel[i*3]*=-1;if(dPos[i*3+1]<.3||dPos[i*3+1]>8.6)dVel[i*3+1]*=-1;if(dPos[i*3+2]<.5||dPos[i*3+2]>11.5)dVel[i*3+2]*=-1}
+    dGeo.attributes.position.needsUpdate=true;
+    let lit=0;for(const z of ZONES)lit=Math.max(lit,inten(z.id));dust.material.opacity=.08+.4*Math.max(lit*.5,E.day*.7);
+    if(burners[1]){burners[1].emissive.set('#ff5a1a');burners[1].emissiveIntensity=cook?1.5+.3*Math.sin(tt*9):0}}
+  setInterval(updatePill,1000);
+  window.applyEnv();
   /* ---- numbered markers (HTML overlay) ---- */
   for(const z of ZONES){const b=document.createElement('button');b.className='mk';b.dataset.zone=z.id;b.setAttribute('aria-label',z.name);
     b.innerHTML=`<span class="n">${z.n}</span><span class="t">${z.name}</span>`;$('#marks').appendChild(b);marks[z.id]=b}
@@ -416,21 +494,37 @@ function init3D(){
 
   const rs=()=>{const w=host.clientWidth,h=host.clientHeight;if(!w||!h)return;renderer.setSize(w,h);camera3.aspect=w/h;camera3.updateProjectionMatrix()};
   window.resize3=rs;new ResizeObserver(rs).observe(host);rs();
-  const v=new THREE.Vector3();
-  (function tick(){requestAnimationFrame(tick);if(tab!=='k')return;controls.update();renderer.render(scene3,camera3);
+  const v=new THREE.Vector3();let last=performance.now(),frame=0,lastInt=last,tt=0;
+  for(const ev of ['pointerdown','pointermove','wheel','touchstart','keydown'])window.addEventListener(ev,()=>{lastInt=performance.now()},{passive:true});
+  (function tick(){requestAnimationFrame(tick);const now=performance.now();if(tab!=='k'||document.hidden){last=now;return}
+    const dt=Math.min(.1,(now-last)/1000);last=now;tt+=dt;frame++;
+    stepPerson(dt,tt);stepFx(dt,tt);
+    if(now-lastInt>30000&&frame%4)return;   // idle: ~15 fps to save tablet battery
+    controls.update();renderer.render(scene3,camera3);
     const w=host.clientWidth,h=host.clientHeight;
     for(const z of ZONES){v.copy(Lz[z.id].anchor).project(camera3);const m=marks[z.id];m.style.transform=`translate(${(v.x*.5+.5)*w}px,${(-v.y*.5+.5)*h}px) translate(-15px,-50%)`;m.style.display=v.z<1?'':'none'}})();
 }
-
 const _col=new THREE.Color();
 function applyLights(){
   for(const z of ZONES){const [r,g,b]=eff(z.id),i=inten(z.id),o=Lz[z.id];if(!o)continue;
     _col.setRGB(r/255,g/255,b/255).convertSRGBToLinear();
     for(const l of o.lights){l.color.copy(_col);l.intensity=l.userData.k*i}
-    for(const m of o.emis){m.emissive.copy(_col);m.emissiveIntensity=i*m.userData.k}}
+    for(const m of o.emis){m.emissive.copy(_col);m.emissiveIntensity=i*m.userData.k}
+    for(const s of o.glows||[]){s.material.color.copy(_col);s.material.opacity=i*s.userData.k}}
+  window.COOK=st.under.on&&st.under.mode==='white'&&st.under.bri>=95&&st.under.k===4500;
 }
-
-
+const fmtTime=h=>{const H=Math.floor(h)%24,M=Math.floor((h%1)*60);return ((H%12)||12)+':'+String(M).padStart(2,'0')+' '+(H<12?'AM':'PM')};
+const phaseOf=h=>h<5.5||h>=21?'Night':h<10?'Morning':h<15?'Midday':h<18?'Afternoon':h<21?'Evening':'Night';
+function updatePill(){const p=$('#livePill');if(!p||!window.ENV)return;
+  p.innerHTML=`<i class="dotl ${ENV.live?'live':''}"></i>${ENV.live?'LIVE':'MANUAL'} &middot; ${fmtTime(ENV.hour)} &middot; ${present?'Kitchen occupied':'Kitchen empty'}`}
+function bindEnv(){
+  const rng=$('#envRng'),live=$('#envLive'),lbl=$('#envLbl');
+  const setNow=()=>{const d=new Date();ENV.hour=d.getHours()+d.getMinutes()/60};
+  const sync=()=>{rng.value=Math.round(ENV.hour*60);lbl.textContent=fmtTime(ENV.hour)+' \u00b7 '+phaseOf(ENV.hour);if(window.applyEnv)applyEnv();updatePill()};
+  rng.addEventListener('input',()=>{ENV.live=false;live.checked=false;ENV.hour=rng.value/60;sync()});
+  live.addEventListener('change',()=>{ENV.live=live.checked;if(ENV.live)setNow();sync()});
+  for(const b of document.querySelectorAll('[data-hour]'))b.addEventListener('click',()=>{ENV.live=false;live.checked=false;ENV.hour=+b.dataset.hour;sync()});
+  setInterval(()=>{if(ENV.live){setNow();sync()}},20000);sync()}
 /* ============ 2D house ============ */
 function buildHouse(){
   const R=(x,y,w,h,label,extra='')=>`<g ${extra}><rect class="room" x="${x}" y="${y}" width="${w}" height="${h}"/><text class="rlabel" x="${x+w/2}" y="${y+h/2+5}">${label}</text></g>`;
@@ -465,6 +559,7 @@ function renderScene(){
   for(const z of ZONES){const m=marks[z.id];if(!m)continue;const [r,g,b]=eff(z.id);
     m.classList.toggle('on',st[z.id].on);m.classList.toggle('sel',sel===z.id);m.style.setProperty('--tc',`rgb(${r},${g},${b})`);
     for(const p of Lz[z.id].proxies)if(p.userData.edge)p.userData.edge.visible=sel===z.id}
+  if(window.updatePill)updatePill();
   updateHouse();
 }function updateHouse(){
   const el=$('#kStatus');if(!el)return;
@@ -514,7 +609,7 @@ function autoHTML(){
    <ul class="log">${log.map(l=>`<li><time>${l.t}</time><b>${l.src}</b><span>${l.msg}</span></li>`).join('')||'<li class="muted">Changes from any source appear here and update the picture instantly.</li>'}</ul>`}
 function renderPanel(){
   panel.innerHTML=`<div class="card"><h2>Scenes</h2><div class="scenes">${SCENES.map(s=>`<button class="scene-btn" data-act="scene" data-name="${s.name}"><i style="background:${s.dot}"></i>${s.name}</button>`).join('')}</div></div>
-   <div class="card"><h2>Lighting zones</h2><div id="zlist" role="listbox">${listHTML()}</div></div>
+   <div class="card" id="env"><h2>Environment</h2><div class="autorow"><div><b>Follow real time</b><div class="muted small" id="envLbl">&nbsp;</div></div><label class="switch"><input type="checkbox" id="envLive" checked aria-label="Follow real time"><span></span></label></div><input class="rng-time" type="range" id="envRng" min="0" max="1439" step="1" aria-label="Time of day"><div class="chips4"><button class="btn sm" data-hour="8">Morning</button><button class="btn sm" data-hour="12.5">Noon</button><button class="btn sm" data-hour="18.2">Evening</button><button class="btn sm" data-hour="22">Night</button></div></div><div class="card"><h2>Lighting zones</h2><div id="zlist" role="listbox">${listHTML()}</div></div>
    <div class="card" id="ctl">${ctlHTML()}</div>
    <div class="card" id="auto">${autoHTML()}</div>`}
 function refreshAll(){renderScene();$('#zlist').innerHTML=listHTML();$('#ctl').innerHTML=ctlHTML();$('#auto').innerHTML=autoHTML()}
@@ -576,7 +671,7 @@ init3D();
 houseEl.innerHTML=buildHouse();
 renderPanel();
 renderScene();
-{const q=new URLSearchParams(location.search),sc=SCENES.find(s=>s.name.toLowerCase()===(q.get('scene')||'').toLowerCase());
+bindEnv();{const q=new URLSearchParams(location.search),sc=SCENES.find(s=>s.name.toLowerCase()===(q.get('scene')||'').toLowerCase());
  if(sc){applySet(sc.set,false)}
  if(Z[q.get('zone')])sel=q.get('zone');
  if(sc||q.get('zone'))refreshAll();
